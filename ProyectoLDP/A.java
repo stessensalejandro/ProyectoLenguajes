@@ -24,7 +24,8 @@ public class A {
 	public int m2(int w1, int w2) { 
 	    v1 = v1*w1;
 	    v2 = v2*v1*w2;
-	    return v1+v2+w1+w2;
+	   return v1+v2+w1+w2;
+
 	}
 
 }
