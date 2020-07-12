@@ -15,17 +15,19 @@
 
  SetLabel VTB, Libre                                    %Creo la etiqueta para la VT de B
  SetD Libre, initB         @VTB: direccion de initB     %Pongo en la VTB la direccion de la version del initB que usa B 
- SetD Libre+1, m1B         @VTB: direccion de m1B       %Pongo en la VTA la direccion de la version de m1B que usa B 
- SetLibre Libre+3                                       %Actualizo Libre segun el tamaño de la VTB
+ SetD Libre+1, m1A         @VTC: direccion de m1A       %Pongo en la VTC la direccion de m1A de la clase A
+ SetD Libre+2, m1B         @VTB: direccion de m1B       %Pongo en la VTB la direccion de la version de m1B que usa B 
+ SetD Libre+3, m2A         @VTB: direccion de m2A       %Pongo en la VTB la direccion de la version de m2A que usa A 
+ SetLibre Libre+5                                       %Actualizo Libre segun el tamaño de la VTB
  SetActual Libre                                        %Actualizo actual tambien
  
   %%% Carga la VT de la clase C
 
  SetLabel VTC, Libre                                    %Creo la etiqueta para la VT de B
  SetD Libre, initC         @VTC: direccion de initC     %Pongo en la VTC la direccion de la version del initC que usa C 
- SetD Libre+1, m2C         @VTC: direccion de m2C       %Pongo en la VTC la direccion de la version de m2C que usa C 
- SetD Libre+2, m1B         @VTB: direccion de m1B       %Pongo en la VTC la direccion de m1B de la clase B 
- SetD Libre+3, m1A         @VTA: direccion de m1A       %Pongo en la VTC la direccion de m1A de la clase A
+ SetD Libre+1, m1A         @VTC: direccion de m1A       %Pongo en la VTC la direccion de m1A de la clase A
+ SetD Libre+2, m1B         @VTC: direccion de m1B       %Pongo en la VTC la direccion de m1B de la clase B 
+ SetD Libre+3, m2C         @VTC: direccion de m2C       %Pongo en la VTC la direccion de la version de m2C que usa C 
  SetLibre Libre+5                                       %Actualizo Libre segun el tamaño de la VTC
  SetActual Libre                                        %Actualizo actual tambien
  
@@ -39,7 +41,7 @@
         SetD Libre, pc+5            @PTR    %Guardo puntero de retorno caigo en "Halt"
         SetD Libre+1, actual        @ED     %Guardo enlace dinamico %main es estatico asi que no tiene this!                                    
         SetActual Libre                     %Muevo actual para que apunte al RA que acabo de crear para main
-        SetLibre Actual+4                   %Muevo libre segun el tamaño del RA de main 
+        SetLibre Actual+5                   %Muevo libre segun el tamaño del RA de main 
         Jump Main                           %Salto al codigo de main
         Halt                                %Cuando termino de ejecutar main finalizo
 
@@ -57,16 +59,58 @@ initA   SetH D[Actual+2]+1, 100     @v1            			%Guardo el valor del param
         Jump D[Libre]                                       %Salto a la direccion de codigo que guarde en el puntero de retorno
 
 %%%--------------------Traduccion de m1A de la clase A-----------------------------
-m1A   SetH D[Actual+2]+1, D[Actual+3]     @x=p            %Guardo el valor del parametro p en x  a traves de this en el RA
-        SetH D[Actual+2]+2, D[Actual+3]*5   @y=p*5          %Guardo el valor del parametro p*5 en y  a traves de this en el RA
+m1A     SetD Actual+3, 0      		@value=0         		%Guardo el valor de la variable local value en el RA
+        SetD Actual+4, 0   			@a=0                    %Guardo el valor de la variable local a en el RA
+		JumpT PC+10 ,(D[Actual+4]<10)&((D[Actual+3]*2)<10)   %Si se cumple salto al cuerpo del for
+		
+%%%%%%%%%%%CREACION DEL RA PARA INVOCAR A M2C%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		SetLibre Libre+1            @Lugar Retorno          %Como m2C devuelve algo reservo lugar para ese valor
+		SetD Libre, pc+11           @PTR                	%Guardo el puntero de retorno para volver de met2
+		SetD Libre+1, Actual        @ED                		%Guardo enlace dinamico para al volver apuntar al RA de m1A 
+		SetD Libre+2, D[Actual+2]   @This               	%Guardo this que en este caso es el objeto referenciado por oA 
+		SetD Libre+3 , D[Actual+3]  @Param value                  %guardo parametro value
+		SetD Libre+4 , D[Actual+4]  @Param a                      %guardo parametro a
+		SetActual Libre                                 	%Muevo actual para que apunte al RA que acabo de crear para met2 
+		SetLibre Actual+7                              		%Muevo libre segun el tamaño del RA de m2C,(reservo espacio para value y a)
+        Jump D[H[D[Actual+2]+0]+3]                      	%Salto al codigo de met2 segun la VT del objeto receptor (el this del RA que acabo de crear)
+       
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+        SetIn Actual+3                                      %Estoy en el cuerpo del for y seteo el value = Sistema.read()
+		SetD Actual+4 , D[Actual+4]+1                       %Incremento a++
+        Jump PC-12		                                    %Vuelvo al ciclo del for
+		SetD Actual+5, D[Libre-1]   @rtn temporal        	%Al volver de la llamada tengo en el lugar que reserve para el retorno rtn
+        SetLibre Libre-1                                	%Ya use el valor de retorno asi que lo libero
+		
+		
+	
+ %%%%%%%%%%%CREACION DEL RA PARA INVOCAR A M2C%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		SetLibre Libre+1            @Lugar Retorno          %Como m2C devuelve algo reservo lugar para ese valor
+		SetD Libre, pc+8           @PTR                	%Guardo el puntero de retorno para volver de met2
+		SetD Libre+1, Actual        @ED                		%Guardo enlace dinamico para al volver apuntar al RA de m1A 
+		SetD Libre+2, D[Actual+2]   @This               	%Guardo this que en este caso es el objeto referenciado por oA 
+		SetD Libre+3 , H[D[Actual+2]+1]  @Param v1                  %guardo parametro value
+		SetD Libre+4 , H[D[Actual+2]+2]  @Param v2                      %guardo parametro a
+		SetActual Libre                                 	%Muevo actual para que apunte al RA que acabo de crear para met2 
+		SetLibre Actual+7                              		%Muevo libre segun el tamaño del RA de m2C,(reservo espacio para value y a)
+        Jump D[H[D[Actual+2]+0]+3]                      	%Salto al codigo de met2 segun la VT del objeto receptor (el this del RA que acabo de crear)
+       
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+		SetD Actual+5,D[Actual+5]+D[Libre-1]   @rtn para retornar        	%Al volver de la llamada tengo en el lugar que reserve para el retorno rtn
+        SetD Actual-1 , D[Actual+5]            @Retorno
+		SetLibre Libre-1                                	%Ya use el valor de retorno asi que lo libero
         SetLibre Actual                                     %Limpio la memoria del RA de met2
         SetActual D[Libre+1]                                %Muevo Actual a donde tenia el enlase dinamico
         Jump D[Libre]                                       %Salto a la direccion de codigo que guarde en el puntero de retorno
 
 %%%--------------------Traduccion de m2A de la clase A-----------------------------
-m2A   SetH D[Actual+2]+1, D[Actual+3]     @x=p            %Guardo el valor del parametro p en x  a traves de this en el RA
-        SetH D[Actual+2]+2, D[Actual+3]*5   @y=p*5          %Guardo el valor del parametro p*5 en y  a traves de this en el RA
-        SetLibre Actual                                     %Limpio la memoria del RA de met2
+
+
+m2A     SetH D[Actual+2]+1,H[D[Actual+2]+1]*D[Actual+3]           		@v1 = v1*w1 
+        SetH D[Actual+2]+2,H[D[Actual+2]+2]*H[D[Actual+2]+1]*D[Actual+4] @v2 = v2*v1*w2
+        SetD Actual-1,H[D[Actual+2]+1]+H[D[Actual+2]+2]+D[Actual+3]+D[Actual+4] @Return
+		
+	   SetLibre Actual                                     %Limpio la memoria del RA de met2
         SetActual D[Libre+1]                                %Muevo Actual a donde tenia el enlase dinamico
         Jump D[Libre]                                       %Salto a la direccion de codigo que guarde en el puntero de retorno
 %%%---------------------------------------------------------------------------------
@@ -91,8 +135,18 @@ initB   SetD Libre , PC+6       @PTR para volver de initA   		%Guardo el puntero
         Jump D[Libre]                                       %Salto a la direccion de codigo que guarde en el puntero de retorno
 		
 %%%--------------------Traduccion de m1B de la clase B-------------------------
-m1B     SetH D[Actual+2]+1, D[Actual+3]     @x=p            %Guardo el valor del parametro p en x  a traves de this en el RA
-        SetH D[Actual+2]+2, D[Actual+3]*5   @y=p*5          %Guardo el valor del parametro p*5 en y  a traves de this en el RA
+m1B     SetLibre Libre+1            @Lugar Retorno          					%Como m2A devuelve algo reservo lugar para ese valor	
+		SetD Libre, pc+8            @PTR para volver de m2C                		%Guardo el puntero de retorno para volver de m2C
+		SetD Libre+1, Actual        @ED Para RA de m2C               		    %Guardo enlace dinamico para al volver apuntar al RA de m2C
+		SetD Libre+2, D[Actual+3]   @This               						%Guardo this que en este caso es el objeto referenciado por oA
+        SetD Libre+3, D[Actual+4]   @param w1             						
+        SetD Libre+4, D[Actual+5]   @param w2   
+		SetActual Libre                                 						%Muevo actual para que apunte al RA que acabo de crear para initB
+        SetLibre Actual+6                               						%Muevo libre segun el tamaño del RA de m1A, tengo tres variables locales
+		Jump D[H[D[Actual+2]]+3]                          						%Salto al codigo de initB segun la VT del objeto receptor		
+		
+		SetD Actual-1 , D[Libre-1]   @Retorno 
+		SetLibre Libre-1                                         %Ya use el valor de retorno asi que lo libero
         SetLibre Actual                                     %Limpio la memoria del RA de met2
         SetActual D[Libre+1]                                %Muevo Actual a donde tenia el enlase dinamico
         Jump D[Libre]                                       %Salto a la direccion de codigo que guarde en el puntero de retorno		
@@ -114,15 +168,57 @@ initC   SetD Libre , PC+6       			@PTR para volver de initB   		%Guardo el punt
         Jump D[Libre]                                      			%Salto a la direccion de codigo que guarde en el puntero de retorno
 		
 %%%--------------------Traduccion de m2C de la clase C----------------------------
-m2C     SetH D[Actual+2]+1, D[Actual+3]     @x=p            %Guardo el valor del parametro p en x  a traves de this en el RA
-        SetH D[Actual+2]+2, D[Actual+3]*5   @y=p*5          %Guardo el valor del parametro p*5 en y  a traves de this en el RA
-        SetLibre Actual                                     %Limpio la memoria del RA de met2
-        SetActual D[Libre+1]                                %Muevo Actual a donde tenia el enlase dinamico
-        Jump D[Libre]                                       %Salto a la direccion de codigo que guarde en el puntero de retorno		
+m2C     JumpT PC+20 , (D[Actual+3]<0) | (D[Actual+4]<0)
+        SetD Actual+5, PO         @xB = new B()         %Guardo en xB una ref al objeto que creo		
+        SetH PO, VTB              @Obj. Clase B - VTB   %Le agrego la VT al nuevo objeto
+        SetPO PO+4                                      %Incremento el PO segun el tamaño del objeto B 	
  
+ %%%%%%%%%%CREACION DEL RA PARA INVOCAR A INITB%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        SetD Libre, pc+6             @PTR para volver de initB                	%Guardo el puntero de retorno para volver de initB
+		SetD Libre+1, Actual         @ED                		                %Guardo enlace dinamico para al volver apuntar al RA de m2C
+        SetD Libre+2, D[Actual+5]    @This               						%Guardo this que en este caso es el objeto referenciado por xB	
+        SetActual Libre                                 						%Muevo actual para que apunte al RA que acabo de crear para initB
+        SetLibre Actual+4                               						%Muevo libre segun el tamaño del RA de m1A, tengo tres variables locales
+		Jump D[H[D[Actual+2]]]                          						%Salto al codigo de initB segun la VT del objeto receptor
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        
 
+%%%%%%%%%%CREACION DEL RA PARA INVOCAR A M1B%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+        SetLibre Libre+1             @Lugar Retorno          					%Como m1B devuelve algo reservo lugar para ese valor	
+		SetD Libre, pc+18            @PTR para volver de m1B                		%Guardo el puntero de retorno para volver de m1B
+		SetD Libre+1, Actual         @ED                		                %Guardo enlace dinamico para al volver apuntar al RA de m2C
+		SetD Libre+2, D[Actual+5]    @This               						%Guardo this que en este caso es el objeto referenciado por xB
+		SetD Libre+3, D[Actual+2]    @param this = oA   		
+		SetD Libre+4, -1    		 @param -1 
+		SetD Libre+5, D[Actual+4]    @param w2 = a 
+		SetActual Libre                                 						%Muevo actual para que apunte al RA que acabo de crear para initB
+        SetLibre Actual+7                               						%Muevo libre segun el tamaño del RA de m1A, tengo tres variables locales
+		Jump D[H[D[Actual+2]]+2]                          						%Salto al codigo de initB segun la VT del objeto receptor
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+%%%%ENTRO AL IF (W1<0 | W2<0)%%%%%%%%%%%%%%%
+        
+%%%%CREACION DEL RA PARA INVOCAR A M2A%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%		
+		SetLibre Libre+1             @Lugar Retorno          					%Como m1B devuelve algo reservo lugar para ese valor	
+		SetD Libre, pc+8             @PTR para volver de m1B                		%Guardo el puntero de retorno para volver de m1B
+		SetD Libre+1, Actual         @ED                		                %Guardo enlace dinamico para al volver apuntar al RA de m2C
+		SetD Libre+2, D[Actual+2]    @This               						%Guardo this que en este caso es el objeto referenciado por xB
+		SetD Libre+3, D[Actual+3]    @param w1             						
+        SetD Libre+4, D[Actual+4]    @param w2   
+		SetActual Libre                                 						%Muevo actual para que apunte al RA que acabo de crear para initB
+        SetLibre Actual+6                               						%Muevo libre segun el tamaño del RA de m1A, tengo tres variables locales
+		Jump m2A                         						%Salto al codigo de initB segun la VT del objeto receptor	
+		
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%5
+		SetD Actual-1 , D[Libre-1]   @Retorno 
+		SetLibre Libre-1                                         %Ya use el valor de retorno asi que lo libero
+		
+        
+        SetLibre Actual                                     					%Limpio la memoria del RA de initC
+        SetActual D[Libre+1]                               						%Muevo Actual a donde tenia el enlase dinamico
+        Jump D[Libre]                                      						%Salto a la direccion de codigo que guarde en el puntero de retorno
+      
+    
 %%%--------------------Traduccion de main de la clase Principal----------------------
    %% Creamos el Obj de clase C y lo guardamos en oA
 main    SetD Actual+2, PO         @oA = new C()         %Guardo en oA una ref al objeto que creo
@@ -141,13 +237,13 @@ main    SetD Actual+2, PO         @oA = new C()         %Guardo en oA una ref al
   
     %% Traduccion llamada oA.m1()
 	    SetLibre Libre+1            @Lugar Retorno      %Como m1 devuelve un int reservo lugar para ese valor
-        SetD Libre, pc+6            @PTR                %Guardo el puntero de retorno para volver de met2
+        SetD Libre, pc+6            @PTR                %Guardo el puntero de retorno para volver de m1A
         SetD Libre+1, Actual        @ED                 %Guardo enlace dinamico para al volver apuntar al RA de main
-        SetD Libre+2, D[Actual+2]   @This               %Guardo this que en este caso es el objeto referenciado por v
-        SetActual Libre                                 %Muevo actual para que apunte al RA que acabo de crear para met2
-        SetLibre Actual+3                               %Muevo libre segun el tama�o del RA de met2
-        Jump D[H[D[Actual+2]+0]+3]                      %Salto al codigo de met2 segun la VT del objeto receptor (el this del RA que acabo de crear)
-        SetD Actual+4, D[Libre-1]   @m =v.met2()        %Al volver de la llamada tengo en el lugar que reserve para el retorno el valor que guardo en m
+        SetD Libre+2, D[Actual+2]   @This               %Guardo this que en este caso es el objeto referenciado por oA
+        SetActual Libre                                 %Muevo actual para que apunte al RA que acabo de crear para m1A
+        SetLibre Actual+6                               %Muevo libre segun el tamaño del RA de m1A, tengo tres variables locales
+        Jump D[H[D[Actual+2]+0]+1]                      %Salto al codigo de met2 segun la VT del objeto receptor (el this del RA que acabo de crear)
+        SetD Actual+4, D[Libre-1]   @rnt        %Al volver de la llamada tengo en el lugar que reserve para el retorno el valor que guardo en m
         SetLibre Libre-1                                %Ya use el valor de retorno asi que lo libero
 		
 	%% Traduccion del print(m)
